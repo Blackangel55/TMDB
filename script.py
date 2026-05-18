@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # START IMAGE — replace with your image URL or Telegram file_id
 # ════════════════════════════════════════════════════════════════════════════
 
-START_IMAGE = "https://i.ibb.co/ZpbyxgPM/x.jpg"  # ← replace this
+START_IMAGE = "https://i.ibb.co/your-image.jpg"  # ← replace this
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -17,8 +17,11 @@ START_TEXT = """🎬 **Welcome to TMDB Poster Bot!**
 Hey {first_name}! 👋
 I fetch **movie & TV show posters** with full details from TMDB.
 
-_Example:_ `/movie RRR 2022`
-_Example:_ `/tv Asur 2`
+Just **type any movie or show name** to get its poster!
+
+_Example:_ `RRR`
+_Example:_ `Mirzapur`
+_Example:_ `The Dark Knight`
 
 💡 `/help` — Full help & tips
 ℹ️ `/about` — About this bot
@@ -39,47 +42,45 @@ START_BUTTONS = InlineKeyboardMarkup([
 HELP_TEXT = """💡 **TMDB Poster Bot — Help**
 
 ━━━━━━━━━━━━━━━━━━━━
-🎬 **Movie Search**
+⚡ **Quick Search — Just Type!**
 ━━━━━━━━━━━━━━━━━━━━
-`/movie Title`
-`/movie Title Year`
+Just **type any movie or show name** directly.
+No command needed — the bot auto-detects.
 
-• `/movie Bahubali`
-• `/movie RRR 2022`
-• `/movie The Dark Knight 2008`
-
-━━━━━━━━━━━━━━━━━━━━
-📺 **TV / OTT Series**
-━━━━━━━━━━━━━━━━━━━━
-`/tv Title`
-`/tv Title Season`
-
-• `/tv Mirzapur`
-• `/tv Asur 2`
-• `/tv Sacred Games 1`
-
-━━━━━━━━━━━━━━━━━━━━
-🔍 **General Search**
-━━━━━━━━━━━━━━━━━━━━
-`/search Title`
-_Auto-detects movie or TV show._
-
-• `/search Pushpa`
-• `/search Family Man`
-
-━━━━━━━━━━━━━━━━━━━━
-⚡ **Quick Search**
-━━━━━━━━━━━━━━━━━━━━
-Just **type any title** — no command needed!
-
+• `RRR`
+• `Mirzapur`
 • `KGF Chapter 2`
+• `The Dark Knight`
 • `Scam 1992`
 
 ━━━━━━━━━━━━━━━━━━━━
+🎬 **Movie — Specific Search**
+━━━━━━━━━━━━━━━━━━━━
+Use when you want to filter by year:
+
+`/movie Title Year`
+
+• `/movie RRR 2022`
+• `/movie Bahubali 2015`
+• `/movie The Dark Knight 2008`
+
+━━━━━━━━━━━━━━━━━━━━
+📺 **TV / OTT — Season Poster**
+━━━━━━━━━━━━━━━━━━━━
+Use when you want a specific season poster:
+
+`/tv Title Season`
+
+• `/tv Asur 2`
+• `/tv Sacred Games 1`
+• `/tv Mirzapur 3`
+
+━━━━━━━━━━━━━━━━━━━━
 💬 **Tips**
-• Add year for accuracy: `/movie KGF 2022`
-• Add season for specific poster: `/tv Asur 2`
-• Posters include rating ⭐, genres 🏷, overview 📝
+• Typing the name is the fastest way to search
+• Use `/movie` with year if wrong result appears
+• Use `/tv` with season for season-specific poster
+• Posters include ⭐ rating, 🏷 genres, 📝 overview
 """
 
 HELP_BUTTONS = InlineKeyboardMarkup([
@@ -133,11 +134,7 @@ USAGE_TV_TEXT = """ℹ️ **Usage:** `/tv Title [Season]`
 • `/tv Mirzapur`
 """
 
-USAGE_SEARCH_TEXT = """ℹ️ **Usage:** `/search Title`
 
-• `/search Pushpa`
-• `/search Family Man`
-"""
 
 
 # ════════════════════════════════════════════════════════════════════════════
