@@ -1,32 +1,3 @@
-"""
-TMDB Poster Bot — powered by Kurigram (Pyrogram fork)
-Fetches movie & TV show posters from The Movie Database (TMDB).
-
-User commands:
-  /start          – Welcome message with image
-  /help           – Help & tips
-  /about          – About this bot
-  /movie RRR 2022 – Movie poster (optional year)
-  /tv Asur 2      – TV season poster (optional season)
-  /search Title   – Auto-detect movie or TV show
-  plain text      – Quick search
-
-Admin commands:
-  /stats          – Bot statistics
-  /admins         – List all admins
-  /ban <id>       – Ban a user
-  /unban <id>     – Unban a user
-  /banned         – List banned users
-  /broadcast      – Broadcast to all users (reply to a message)
-  /addfsub <id>   – Add force subscribe channel
-  /delfsub <id>   – Remove force subscribe channel
-  /listfsub       – List force subscribe channels
-
-Owner-only commands:
-  /addadmin <id>  – Add an admin
-  /deladmin <id>  – Remove an admin
-"""
-
 import io
 import os
 import hashlib
@@ -64,7 +35,7 @@ from script import (
     HELP_TEXT, HELP_BUTTONS,
     ABOUT_TEXT, ABOUT_BUTTONS,
     SEARCHING_TEXT, NOT_FOUND_TEXT, API_ERROR_TEXT,
-    USAGE_MOVIE_TEXT, USAGE_TV_TEXT, USAGE_SEARCH_TEXT,
+    USAGE_MOVIE_TEXT, USAGE_TV_TEXT,
     FSUB_JOINED, FSUB_STILL_NOT_JOINED,
     USAGE_ADDFSUB, USAGE_DELFSUB,
     build_caption, build_keyboard, build_fsub_message,
@@ -497,36 +468,19 @@ async def cmd_tv(client: Client, message: Message):
     await send_poster(client, message, data, image_url)
 
 
-@app.on_message(filters.command("search") & filters.private)
-async def cmd_search(client: Client, message: Message):
-    args = message.command[1:]
-    if not args:
-        return await message.reply(USAGE_SEARCH_TEXT)
-
-    title = " ".join(args)
-    thinking = await message.reply(SEARCHING_TEXT.format(title=title))
-    data = await fetch_multi(title)
-    await thinking.delete()
-
-    if not data:
-        return await message.reply(NOT_FOUND_TEXT.format(title=title))
-
-    image_url = get_poster_url(data)
-    if not image_url:
-        return await message.reply(NOT_FOUND_TEXT.format(title=title))
-
-    await send_poster(client, message, data, image_url)
-
-
 @app.on_message(
     filters.private & filters.text
     & ~filters.command([
-        "start", "help", "about", "movie", "tv", "search",
+        "start", "help", "about", "movie", "tv",
         "stats", "admins", "ban", "unban", "banned", "broadcast",
         "addfsub", "delfsub", "listfsub", "addadmin", "deladmin",
     ])
 )
 async def plain_search(client: Client, message: Message):
+    """
+    Any plain text message triggers a search.
+    User just types the movie/show name — no command needed.
+    """
     title = message.text.strip()
     if not title:
         return
