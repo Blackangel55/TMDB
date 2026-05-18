@@ -1,0 +1,7 @@
+kurigram==2.2.19
+TgCrypto
+aiohttp
+motor
+Pillow
+python-dotenv
+flask
