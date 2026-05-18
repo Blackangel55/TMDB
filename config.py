@@ -1,8 +1,3 @@
-"""
-config.py — Central config for TMDB Poster Bot
-Edit values here OR set environment variables (env vars take priority).
-"""
-
 import os
 
 # ─── TELEGRAM ────────────────────────────────────────────────────────────────
@@ -11,7 +6,7 @@ API_HASH  = os.getenv("API_HASH", "YOUR_API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
 
 # ─── OWNER / ADMIN ───────────────────────────────────────────────────────────
-OWNER_ID  = int(os.getenv("OWNER_ID", "0"))
+OWNER_ID  = int(os.getenv("OWNER_ID", "1350212613"))
 
 _ADMIN_IDS   = os.getenv("ADMIN_IDS", "")
 ADMIN_IDS: list[int] = (
@@ -20,8 +15,8 @@ ADMIN_IDS: list[int] = (
 )
 
 # ─── MONGODB ─────────────────────────────────────────────────────────────────
-DB_URI  = os.getenv("DB_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "tmdb_poster_bot")
+DB_URI  = os.getenv("DB_URI", "")
+DB_NAME = os.getenv("DB_NAME", "tmdb_poster")
 
 # ─── TMDB API ────────────────────────────────────────────────────────────────
 # Get your free API key at https://www.themoviedb.org/settings/api
