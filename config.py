@@ -6,7 +6,7 @@ API_HASH  = os.getenv("API_HASH", "YOUR_API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
 
 # ─── OWNER / ADMIN ───────────────────────────────────────────────────────────
-OWNER_ID  = int(os.getenv("OWNER_ID", "1350212613"))
+OWNER_ID  = int(os.getenv("OWNER_ID", "0"))
 
 _ADMIN_IDS   = os.getenv("ADMIN_IDS", "")
 ADMIN_IDS: list[int] = (
