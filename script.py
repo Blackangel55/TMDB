@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # START IMAGE — replace with your image URL or Telegram file_id
 # ════════════════════════════════════════════════════════════════════════════
 
-START_IMAGE = "https://i.ibb.co/your-image.jpg"  # ← replace this
+START_IMAGE = "https://i.ibb.co/ZpbyxgPM/x.jpg"  # ← replace this
 
 
 # ════════════════════════════════════════════════════════════════════════════
