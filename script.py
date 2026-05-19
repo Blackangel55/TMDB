@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # START IMAGE — replace with your image URL or Telegram file_id
 # ════════════════════════════════════════════════════════════════════════════
 
-START_IMAGE = "https://i.ibb.co/your-image.jpg"  # ← replace this
+START_IMAGE = "https://i.ibb.co/ZpbyxgPM/x.jpg"  # ← replace this
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -95,7 +95,6 @@ HELP_BUTTONS = InlineKeyboardMarkup([
 ABOUT_TEXT = """<b>○ 𝖬𝗒 𝖭𝖺𝗆𝖾 : {}</b>
 <b>○ 𝖢𝗋𝖾𝖺𝗍𝗈𝗋 : <a href='https://t.me/GUARDIANff'>𝖳𝗁𝗂𝗌 𝖯𝖾𝗋𝗌𝗈𝗇</a></b>
 <b>○ 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 : 𝖯𝗒𝗍𝗁𝗈𝗇 𝟥</b>
-<b>○ 𝖯𝗈𝗌𝗍𝖾𝗋 𝖠𝖯𝖨 : 𝖳𝖬𝖣𝖡</b>
 <b>○ 𝖲𝗎𝗉𝗉𝗈𝗋𝗍 𝖦𝗋𝗈𝗎𝗉 : <a href='https://t.me/AM_FILMS'>𝖳𝖺𝗉 𝖧𝖾𝗋𝖾</a></b>"""
 
 ABOUT_BUTTONS = InlineKeyboardMarkup([
@@ -166,68 +165,138 @@ USAGE_DELFSUB = "Usage: `/delfsub <channel_id>`\nExample: `/delfsub -10012345678
 # CAPTION BUILDER  (TMDB fields)
 # ════════════════════════════════════════════════════════════════════════════
 
+def build_simple_caption(data: dict) -> str:
+    """Minimal caption — just title and year. Shown on first poster send."""
+    title = data.get("title") or data.get("name", "Unknown")
+    date  = data.get("release_date") or data.get("first_air_date", "")
+    year  = date[:4] if date else ""
+    media = data.get("media_type", "")
+    icon  = "📺" if media == "tv" or data.get("number_of_seasons") else "🎬"
+    return f"<b>{icon} {title} [{year}]</b>" if year else f"<b>{icon} {title}</b>"
+
+
 def build_caption(data: dict, plot_max: int = 300) -> str:
     """
-    Build caption from TMDB response.
-    Works for both movie and TV (multi search) results.
-    TMDB fields:
-      title / name, release_date / first_air_date,
-      vote_average, genres, overview, media_type,
-      number_of_seasons (TV details)
+    Build HTML caption from TMDB response.
+    Works for both movie and TV results.
     """
     title    = data.get("title") or data.get("name", "Unknown")
     date     = data.get("release_date") or data.get("first_air_date", "")
     year     = date[:4] if date else ""
     rating   = data.get("vote_average", "")
     overview = data.get("overview", "")
-    genres   = data.get("genres", [])           # list of {id, name}
+    genres   = data.get("genres", [])
+    runtime  = data.get("runtime", "")
     seasons  = data.get("number_of_seasons", "")
-    runtime  = data.get("runtime", "")          # movie only
-    media    = data.get("media_type", "")       # from multi search
+    episodes = data.get("number_of_episodes", "")
+    languages = data.get("spoken_languages", [])
+    countries = data.get("production_countries", [])
+    cast_list = data.get("cast", [])             # populated by fetch functions
+    season_name = data.get("season_name", "")
+    season_num  = data.get("season_number", "")
 
-    icon = "📺" if media == "tv" or seasons else "🎬"
+    # ── Title + year ──
+    title_line = f"{title} [{year}]" if year else title
+    if season_name:
+        title_line += f" | {season_name}"
 
-    lines = []
-    if year:
-        lines.append(f"{icon} **{title}** ({year})")
-    else:
-        lines.append(f"{icon} **{title}**")
-
-    lines.append("━━━━━━━━━━━━━━━━━━━━")
-
-    meta = []
-    if rating:
-        meta.append(f"⭐ {round(float(rating), 1)}/10")
+    # ── Duration ──
     if runtime:
-        meta.append(f"🕐 {runtime} min")
-    if seasons:
-        meta.append(f"📺 {seasons} Season{'s' if int(seasons) > 1 else ''}")
-    if meta:
-        lines.append("  |  ".join(meta))
+        duration = f"{runtime} min"
+    elif seasons:
+        s = int(seasons)
+        duration = f"{s} Season{'s' if s > 1 else ''}"
+        if episodes:
+            duration += f" · {episodes} Episodes"
+    else:
+        duration = "N/A"
 
-    if genres:
-        lines.append("🏷 " + " · ".join(g["name"] for g in genres[:4]))
+    # ── Release info ──
+    release_info = date if date else "N/A"
 
+    # ── Rating ──
+    rating_str = f"{round(float(rating), 1)}/10 ⭐" if rating else "N/A"
+
+    # ── Language ──
+    if languages:
+        lang_str = ", ".join(
+            l.get("english_name") or l.get("name", "") for l in languages[:3]
+        )
+    else:
+        lang_str = "N/A"
+
+    # ── Country ──
+    if countries:
+        country_str = ", ".join(c.get("name", "") for c in countries[:3])
+    else:
+        country_str = "N/A"
+
+    # ── Genre ──
+    genre_str = ", ".join(g["name"] for g in genres[:5]) if genres else "N/A"
+
+    # ── Plot ──
     if overview:
-        short = (overview[:plot_max] + "…") if len(overview) > plot_max else overview
-        lines.append(f"\n📝 _{short}_")
+        plot_str = (overview[:plot_max] + "…") if len(overview) > plot_max else overview
+    else:
+        plot_str = "N/A"
 
-    return "\n".join(lines)
+    # ── Cast ──
+    if cast_list:
+        cast_str = ", ".join(cast_list[:5])
+    else:
+        cast_str = "N/A"
+
+    caption = (
+        f"<b>🎬𝚃𝚒𝚝𝚕𝚎 :- {title_line}\n\n"
+        f"⭐️𝚁𝚊𝚝𝚒𝚗𝚐 :- {rating_str}\n\n"
+        f"⏱️𝙳𝚞𝚛𝚊𝚝𝚒𝚘𝚗 :- <i>{duration}</i>\n\n"
+        f"🎞️𝚁𝚎𝚕𝚎𝚊𝚜𝚎 𝚒𝚗𝚏𝚘 :- {release_info}\n\n"
+        f"🔊𝙻𝚊𝚗𝚐𝚞𝚊𝚐𝚎 :- {lang_str}\n\n"
+        f"🏳️𝙲𝚘𝚞𝚗𝚝𝚛𝚢 𝙾𝚏 𝙾𝚛𝚒𝚐𝚒𝚗 :- {country_str}\n\n"
+        f"🔖𝙶𝚎𝚗𝚛𝚎 :- {genre_str}\n\n"
+        f"📋𝙿𝚕𝚘𝚝 𝚘𝚏 𝚝𝚑𝚎 𝚖𝚘𝚟𝚒𝚎 :- {plot_str}\n\n"
+        f"📽️𝙲𝚊𝚜𝚝 𝚒𝚗𝚏𝚘 :- {cast_str}</b>"
+    )
+
+    return caption
 
 
-def build_keyboard(data: dict) -> InlineKeyboardMarkup | None:
-    """Build IMDb / TMDB buttons if IDs are available."""
-    buttons = []
-    imdb_id = data.get("imdb_id")
+def build_keyboard(data: dict, show_details: bool = True) -> InlineKeyboardMarkup | None:
+    """
+    Build inline keyboard.
+    Row 1: 📋 Details button (callback) — tapping shows full caption
+    Row 2: IMDb + TMDB url buttons
+    """
     tmdb_id = data.get("id")
+    imdb_id = data.get("imdb_id")
     media   = data.get("media_type", "movie")
+    kind    = "tv" if (media == "tv" or data.get("number_of_seasons")) else "movie"
 
+    rows = []
+
+    # Details button — callback_data encodes tmdb_id and media type
+    if show_details and tmdb_id:
+        rows.append([
+            InlineKeyboardButton(
+                "📋 Details",
+                callback_data=f"details_{kind}_{tmdb_id}"
+            )
+        ])
+
+    # URL buttons
+    url_row = []
     if imdb_id:
-        buttons.append(InlineKeyboardButton("🎞 IMDb", url=f"https://www.imdb.com/title/{imdb_id}"))
+        url_row.append(InlineKeyboardButton("🎞 IMDb", url=f"https://www.imdb.com/title/{imdb_id}"))
     if tmdb_id:
-        kind = "tv" if (media == "tv" or data.get("number_of_seasons")) else "movie"
-        buttons.append(InlineKeyboardButton(
+        url_row.append(InlineKeyboardButton(
             "🎬 TMDB", url=f"https://www.themoviedb.org/{kind}/{tmdb_id}"
         ))
+    if url_row:
+        rows.append(url_row)
 
-    return InlineKeyboardMarkup([buttons]) if buttons else None
+    return InlineKeyboardMarkup(rows) if rows else None
+
+
+def build_details_keyboard(data: dict) -> InlineKeyboardMarkup | None:
+    """Keyboard shown after details are expanded — no Details button, only links."""
+    return build_keyboard(data, show_details=False)
