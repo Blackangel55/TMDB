@@ -38,7 +38,7 @@ from script import (
     USAGE_MOVIE_TEXT, USAGE_TV_TEXT,
     FSUB_JOINED, FSUB_STILL_NOT_JOINED,
     USAGE_ADDFSUB, USAGE_DELFSUB,
-    build_caption, build_keyboard, build_fsub_message,
+    build_simple_caption, build_caption, build_keyboard, build_details_keyboard, build_fsub_message,
 )
 
 # ─── DATABASE ────────────────────────────────────────────────────────────────
@@ -142,14 +142,22 @@ async def fetch_movie(title: str, year: str = None) -> dict | None:
     movie = data["results"][0]
     movie_id = movie["id"]
 
-    # Fetch full details for genres, runtime, imdb_id
-    details = await tmdb_get(f"/movie/{movie_id}", {"append_to_response": "external_ids"})
+    # Fetch full details including credits for cast
+    details = await tmdb_get(
+        f"/movie/{movie_id}",
+        {"append_to_response": "external_ids,credits"}
+    )
     if details:
         details["media_type"] = "movie"
         details["imdb_id"] = (
             details.get("imdb_id")
             or details.get("external_ids", {}).get("imdb_id")
         )
+        # Extract top cast names
+        credits = details.get("credits", {})
+        details["cast"] = [
+            m["name"] for m in credits.get("cast", [])[:5]
+        ]
         return details
 
     movie["media_type"] = "movie"
@@ -168,10 +176,10 @@ async def fetch_tv(title: str, season: str = None) -> dict | None:
     show = data["results"][0]
     show_id = show["id"]
 
-    # Full show details
+    # Full show details including credits
     details = await tmdb_get(
         f"/tv/{show_id}",
-        {"append_to_response": "external_ids"}
+        {"append_to_response": "external_ids,credits"}
     )
     if not details:
         show["media_type"] = "tv"
@@ -179,6 +187,12 @@ async def fetch_tv(title: str, season: str = None) -> dict | None:
 
     details["media_type"] = "tv"
     details["imdb_id"] = details.get("external_ids", {}).get("imdb_id")
+
+    # Extract top cast names
+    credits = details.get("credits", {})
+    details["cast"] = [
+        m["name"] for m in credits.get("cast", [])[:5]
+    ]
 
     # Season-specific poster
     if season:
@@ -249,8 +263,9 @@ async def send_poster(
     data: dict,
     image_url: str,
 ):
-    caption  = build_caption(data, plot_max=PLOT_MAX_CHARS)
-    keyboard = build_keyboard(data)
+    # Simple caption on first send — user taps "📋 Details" for full info
+    caption   = build_simple_caption(data)
+    keyboard  = build_keyboard(data)
     cache_key = url_hash(image_url)
 
     # ── 1. Check cache ────────────────────────────────────────────────────
@@ -264,6 +279,7 @@ async def send_poster(
                 photo=cached["file_id"],
                 caption=caption,
                 reply_markup=keyboard,
+                parse_mode=enums.ParseMode.HTML,
             )
             return
         except Exception as e:
@@ -303,6 +319,7 @@ async def send_poster(
             photo=io.BytesIO(image_bytes),
             caption=caption,
             reply_markup=keyboard,
+            parse_mode=enums.ParseMode.HTML,
         )
         if sent and sent.photo:
             await db.update_file_id(cache_key, sent.photo.file_id)
@@ -318,6 +335,7 @@ async def send_poster(
             file_name="poster.jpg",
             caption=caption,
             reply_markup=keyboard,
+            parse_mode=enums.ParseMode.HTML,
         )
         if sent and sent.document:
             await db.update_file_id(cache_key, sent.document.file_id)
@@ -330,6 +348,7 @@ async def send_poster(
         f"{caption}\n\n🖼 [View Poster]({image_url})",
         reply_markup=keyboard,
         link_preview_options=LinkPreviewOptions(is_disabled=True),
+        parse_mode=enums.ParseMode.HTML,
     )
 
 
@@ -696,6 +715,49 @@ async def cb_check_fsub(client: Client, query: CallbackQuery):
         text, keyboard = build_fsub_message(missing)
         await query.edit_message_text(text, reply_markup=keyboard)
         await query.answer(FSUB_STILL_NOT_JOINED, show_alert=True)
+
+
+@app.on_callback_query(filters.regex(r"^details_(movie|tv)_(\d+)$"))
+async def cb_details(client: Client, query: CallbackQuery):
+    """User tapped 📋 Details — fetch full info and edit caption."""
+    parts    = query.data.split("_")   # details / movie|tv / id
+    kind     = parts[1]
+    tmdb_id  = parts[2]
+
+    await query.answer("Loading details…")
+
+    # Fetch full details again (will be fast if TMDB CDN is cached)
+    if kind == "movie":
+        data = await tmdb_get(f"/movie/{tmdb_id}", {"append_to_response": "external_ids,credits"})
+        if data:
+            data["media_type"] = "movie"
+            data["imdb_id"] = data.get("imdb_id") or data.get("external_ids", {}).get("imdb_id")
+            credits = data.get("credits", {})
+            data["cast"] = [m["name"] for m in credits.get("cast", [])[:5]]
+    else:
+        data = await tmdb_get(f"/tv/{tmdb_id}", {"append_to_response": "external_ids,credits"})
+        if data:
+            data["media_type"] = "tv"
+            data["imdb_id"] = data.get("external_ids", {}).get("imdb_id")
+            credits = data.get("credits", {})
+            data["cast"] = [m["name"] for m in credits.get("cast", [])[:5]]
+
+    if not data:
+        await query.answer("Could not load details.", show_alert=True)
+        return
+
+    full_caption = build_caption(data, plot_max=PLOT_MAX_CHARS)
+    keyboard     = build_details_keyboard(data)
+
+    try:
+        await query.edit_message_caption(
+            caption=full_caption,
+            reply_markup=keyboard,
+            parse_mode=enums.ParseMode.HTML,
+        )
+    except Exception as e:
+        log.error("edit_message_caption failed: %s", e)
+        await query.answer("Could not update caption.", show_alert=True)
 
 
 @app.on_callback_query(filters.regex("^start$"))
