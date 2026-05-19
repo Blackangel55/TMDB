@@ -10,6 +10,10 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import (
     CallbackQuery,
     InputMediaPhoto,
+    InlineQuery,
+    InlineQueryResultPhoto,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
     LinkPreviewOptions,
     Message,
 )
@@ -795,6 +799,130 @@ async def cb_about(client: Client, query: CallbackQuery):
         link_preview_options=LinkPreviewOptions(is_disabled=True),
     )
     await query.answer()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# INLINE MODE  — @botname RRR  in any chat
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.on_inline_query()
+async def inline_search(client: Client, inline_query: InlineQuery):
+    """
+    Handles @botname <title> in any chat.
+    Returns up to 5 poster results with full details on selection.
+    """
+    query = inline_query.query.strip()
+
+    # Show placeholder when query is empty
+    if not query:
+        await inline_query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="🎬 Type a movie or show name…",
+                    input_message_content=InputTextMessageContent(
+                        "Type a movie or show name after the bot username to search."
+                    ),
+                    description="Example: @botname RRR",
+                )
+            ],
+            cache_time=5,
+        )
+        return
+
+    # Search TMDB multi endpoint — returns mixed movie+tv results
+    data = await tmdb_get("/search/multi", {"query": query})
+    if not data or not data.get("results"):
+        await inline_query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="❌ No results found",
+                    input_message_content=InputTextMessageContent(
+                        f"No results found for: {query}"
+                    ),
+                    description="Try a different title",
+                )
+            ],
+            cache_time=10,
+        )
+        return
+
+    results = []
+    for item in data["results"][:8]:
+        media = item.get("media_type")
+        if media not in ("movie", "tv"):
+            continue
+
+        title    = item.get("title") or item.get("name", "Unknown")
+        date     = item.get("release_date") or item.get("first_air_date", "")
+        year     = date[:4] if date else ""
+        rating   = item.get("vote_average", "")
+        overview = item.get("overview", "") or ""
+        poster   = item.get("poster_path")
+        backdrop = item.get("backdrop_path")
+        tmdb_id  = item.get("id")
+
+        if not poster and not backdrop:
+            continue
+
+        # Use poster if available, else backdrop
+        photo_url   = f"{TMDB_IMG_BASE}{poster}" if poster else f"{TMDB_BG_BASE}{backdrop}"
+        thumb_url   = f"https://image.tmdb.org/t/p/w185{poster}" if poster else photo_url
+
+        icon        = "📺" if media == "tv" else "🎬"
+        title_line  = f"{icon} {title} [{year}]" if year else f"{icon} {title}"
+        rating_str  = f"⭐ {round(float(rating), 1)}/10" if rating else ""
+        short_plot  = (overview[:200] + "…") if len(overview) > 200 else overview
+
+        # Simple caption sent to chat
+        caption = f"<b>{title_line}</b>"
+        if rating_str:
+            caption += f"\n{rating_str}"
+        if short_plot:
+            caption += f"\n\n<i>{short_plot}</i>"
+
+
+        # Keyboard with Details + TMDB link
+        kind = "tv" if media == "tv" else "movie"
+        from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📋 Details", callback_data=f"details_{kind}_{tmdb_id}")],
+            [InlineKeyboardButton("🎬 TMDB", url=f"https://www.themoviedb.org/{kind}/{tmdb_id}")],
+        ])
+
+        try:
+            results.append(
+                InlineQueryResultPhoto(
+                    photo_url=photo_url,
+                    thumb_url=thumb_url,
+                    title=f"{title_line}",
+                    description=f"{rating_str}  {short_plot[:80]}".strip(),
+                    caption=caption,
+                    reply_markup=keyboard,
+                    parse_mode=enums.ParseMode.HTML,
+                )
+            )
+        except Exception as e:
+            log.warning("Inline result build failed for %s: %s", title, e)
+            continue
+
+        if len(results) >= 5:
+            break
+
+    if not results:
+        await inline_query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    title="❌ No poster available",
+                    input_message_content=InputTextMessageContent(
+                        f"No poster found for: {query}"
+                    ),
+                )
+            ],
+            cache_time=10,
+        )
+        return
+
+    await inline_query.answer(results=results, cache_time=30)
 
 
 # ─── KOYEB HEALTH SERVER ─────────────────────────────────────────────────────
