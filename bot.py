@@ -800,20 +800,9 @@ async def cb_about(client: Client, query: CallbackQuery):
     )
     await query.answer()
 
-
-# ════════════════════════════════════════════════════════════════════════════
-# INLINE MODE  — @botname RRR  in any chat
-# ════════════════════════════════════════════════════════════════════════════
-
 @app.on_inline_query()
 async def inline_search(client: Client, inline_query: InlineQuery):
-    """
-    Handles @botname <title> in any chat.
-    Returns up to 5 poster results with full details on selection.
-    """
     query = inline_query.query.strip()
-
-    # Show placeholder when query is empty
     if not query:
         await inline_query.answer(
             results=[
@@ -829,7 +818,6 @@ async def inline_search(client: Client, inline_query: InlineQuery):
         )
         return
 
-    # Search TMDB multi endpoint — returns mixed movie+tv results
     data = await tmdb_get("/search/multi", {"query": query})
     if not data or not data.get("results"):
         await inline_query.answer(
@@ -863,8 +851,6 @@ async def inline_search(client: Client, inline_query: InlineQuery):
 
         if not poster and not backdrop:
             continue
-
-        # Use poster if available, else backdrop
         photo_url   = f"{TMDB_IMG_BASE}{poster}" if poster else f"{TMDB_BG_BASE}{backdrop}"
         thumb_url   = f"https://image.tmdb.org/t/p/w185{poster}" if poster else photo_url
 
@@ -873,7 +859,6 @@ async def inline_search(client: Client, inline_query: InlineQuery):
         rating_str  = f"⭐ {round(float(rating), 1)}/10" if rating else ""
         short_plot  = (overview[:200] + "…") if len(overview) > 200 else overview
 
-        # Simple caption sent to chat
         caption = f"<b>{title_line}</b>"
         if rating_str:
             caption += f"\n{rating_str}"
@@ -881,7 +866,6 @@ async def inline_search(client: Client, inline_query: InlineQuery):
             caption += f"\n\n<i>{short_plot}</i>"
 
 
-        # Keyboard with Details + TMDB link
         kind = "tv" if media == "tv" else "movie"
         from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         keyboard = InlineKeyboardMarkup([
@@ -925,7 +909,6 @@ async def inline_search(client: Client, inline_query: InlineQuery):
     await inline_query.answer(results=results, cache_time=30)
 
 
-# ─── KOYEB HEALTH SERVER ─────────────────────────────────────────────────────
 from flask import Flask as _Flask
 
 _health_app = _Flask(__name__)
@@ -944,7 +927,6 @@ def _run_health_server():
     _health_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 
-# ─── RUN ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     async def on_start(client, *args):
         ok = await db.ping()
@@ -958,5 +940,5 @@ if __name__ == "__main__":
     if KEEP_ALIVE:
         threading.Thread(target=_run_health_server, daemon=True).start()
 
-    log.info("Starting TMDB Poster Bot…")
+    log.info("Starting TMDB Poster Bot Created By @GUARDIANff")
     app.run()
