@@ -818,7 +818,7 @@ def _run_health_server():
 
 # ─── RUN ─────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    async def on_start(client):
+    async def on_start(client, *args):
         ok = await db.ping()
         if ok:
             log.info("MongoDB connected successfully")
