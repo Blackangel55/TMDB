@@ -26,7 +26,7 @@ TMDB_IMG_BASE = "https://image.tmdb.org/t/p/w780"   # poster size
 TMDB_BG_BASE  = "https://image.tmdb.org/t/p/w1280"  # backdrop size
 
 # ─── BOT SETTINGS ────────────────────────────────────────────────────────────
-SESSION_NAME   = os.getenv("SESSION_NAME", "/app/sessions/tmdb_poster_bot")
+SESSION_NAME   = os.getenv("SESSION_NAME", "/app/sessions/tmdb_poster")
 PLOT_MAX_CHARS = int(os.getenv("PLOT_MAX_CHARS", "300"))
 API_TIMEOUT    = int(os.getenv("API_TIMEOUT", "15"))
 KEEP_ALIVE     = os.getenv("KEEP_ALIVE", "true").lower() == "true"
